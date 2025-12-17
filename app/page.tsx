@@ -1,65 +1,124 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getAuth, signOut } from "firebase/auth";
+import { app, db } from "../lib/firebase"; // Adicionado db
+import { doc, updateDoc } from "firebase/firestore"; // Adicionado updateDoc
+import { useAuth } from "./contexts/AuthContext";
+
+export default function HomePage() {
+  const { user, cargo, loading } = useAuth();
+  const router = useRouter();
+  const auth = getAuth(app);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/login");
+  };
+
+  const handlePromoteToAdmin = async () => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, "usuarios", user.uid), {
+        cargo: "admin"
+      });
+      alert("Sucesso! Você agora é Admin. A página será recarregada.");
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao promover", error);
+      alert("Erro ao promover conta.");
+    }
+  };
+
+  const getNomeUsuario = () => {
+    if (!user || !user.email) return "Visitante";
+    const parteNome = user.email.split('@')[0];
+    return parteNome.charAt(0).toUpperCase() + parteNome.slice(1);
+  };
+
+  if (loading) return <div style={styles.container}>Verificando permissões...</div>;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={styles.logo}>Sygmund <span style={{ fontSize: '0.5em', color: '#888' }}>v2</span></h1>
+        <div style={styles.userInfo}>
+          <span style={styles.userEmail}>{user?.email} ({cargo === 'admin' ? 'Admin' : 'Equipe'})</span>
+          <button onClick={handleLogout} style={styles.logoutLink}>Sair</button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <main style={styles.main}>
+        <h2 style={styles.welcome}>Olá, {getNomeUsuario()}!</h2>
+        <p style={styles.subtitle}>Painel de Gestão Clínica</p>
+
+        {/* BOTÃO DE EMERGÊNCIA/DEV PARA VIRAR ADMIN */}
+        {/* LÓGICA DE SEGURANÇA: Botão só aparece para os donos */}
+        {user?.email && ['gtc88comin@gmail.com', 'gtcomin@yahoo.com.br'].includes(user.email) && cargo !== 'admin' && (
+          <div style={{ marginBottom: '20px', padding: '10px', background: '#332b00', borderRadius: '5px', border: '1px solid #ffd700' }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#ffd700' }}>🔧 Modo Desenvolvedor: Você não é admin.</p>
+            <button onClick={handlePromoteToAdmin} style={{ ...styles.cardButton, width: 'auto', background: '#ffd700', color: '#000' }}>
+              Virar Admin Agora
+            </button>
+          </div>
+        )}
+
+        <div style={styles.grid}>
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>👥 Pacientes</h3>
+            <p style={styles.cardText}>Fichas, contatos e prontuários.</p>
+            <button style={styles.cardButton} onClick={() => router.push('/pacientes')}>Acessar Lista</button>
+          </div>
+
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>📅 Agenda</h3>
+            <p style={styles.cardText}>Marcar consultas e ver horários.</p>
+            <button style={styles.cardButton} onClick={() => router.push('/agenda')}>Acessar</button>
+          </div>
+
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>🏥 Convênios</h3>
+            <p style={styles.cardText}>Gerenciar planos de saúde aceitos.</p>
+            <button style={styles.cardButton} onClick={() => router.push('/convenios')}>Gerenciar</button>
+          </div>
+
+          {/* 👇 SÓ MOSTRA SE FOR ADMIN */}
+          {cargo === 'admin' && (
+            <div style={{ ...styles.card, border: '1px solid #333' }}>
+              <h3 style={{ ...styles.cardTitle, color: '#4caf50' }}>💰 Financeiro</h3>
+              <p style={styles.cardText}>Histórico de atendimentos e caixa.</p>
+              <button style={styles.cardButton} onClick={() => router.push('/atendimentos')}>
+                Ver Caixa
+              </button>
+            </div>
+          )}
+
         </div>
       </main>
     </div>
   );
 }
+
+const styles = {
+  container: { minHeight: "100vh", backgroundColor: "#121212", color: "#e0e0e0", fontFamily: "sans-serif" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 40px", borderBottom: "1px solid #333", backgroundColor: "#1e1e1e" },
+  logo: { margin: 0, fontSize: "24px", color: "#fff" },
+  userInfo: { display: "flex", gap: "20px", alignItems: "center" },
+  userEmail: { fontSize: "14px", color: "#aaa" },
+  logoutLink: { background: "none", border: "none", color: "#ff5f5f", cursor: "pointer", fontSize: "14px" },
+  main: { padding: "40px", maxWidth: "1000px", margin: "0 auto" },
+  welcome: { fontSize: "32px", marginBottom: "10px", color: "#fff" },
+  subtitle: { fontSize: "16px", color: "#888", marginBottom: "40px" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" },
+  card: { backgroundColor: "#1e1e1e", padding: "20px", borderRadius: "8px", display: "flex", flexDirection: "column" as const, gap: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.3)" },
+  cardTitle: { margin: 0, fontSize: "18px", color: "#fff" },
+  cardText: { fontSize: "13px", color: "#aaa", flexGrow: 1 },
+  cardButton: { padding: "10px", backgroundColor: "#333", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", marginTop: "10px", fontWeight: "bold", width: "100%" }
+};
