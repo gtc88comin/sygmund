@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getAuth, signOut } from "firebase/auth";
 import { app, db } from "../lib/firebase"; // Adicionado db
-import { doc, updateDoc } from "firebase/firestore"; // Adicionado updateDoc
+import { doc, updateDoc, setDoc } from "firebase/firestore"; // Adicionado setDoc
 import { useAuth } from "./contexts/AuthContext";
 
 export default function HomePage() {
@@ -26,9 +26,11 @@ export default function HomePage() {
   const handlePromoteToAdmin = async () => {
     if (!user) return;
     try {
-      await updateDoc(doc(db, "usuarios", user.uid), {
-        cargo: "admin"
-      });
+      // Use setDoc com merge para criar o documento se ele não existir
+      await setDoc(doc(db, "usuarios", user.uid), {
+        cargo: "admin",
+        email: user.email // Garante que o email fica salvo
+      }, { merge: true });
       alert("Sucesso! Você agora é Admin. A página será recarregada.");
       window.location.reload();
     } catch (error) {

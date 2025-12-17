@@ -27,11 +27,12 @@ export default function NovaConsulta() {
     setLoading(true);
     try {
       const pacienteInfo = pacientes.find(p => p.id === pacienteId);
-      
+
       // Salvamos na mesma coleção 'atendimentos', mas com status 'Agendado'
       await addDoc(collection(db, "atendimentos"), {
         pacienteId,
         pacienteNome: pacienteInfo.nome,
+        pacienteTelefone: pacienteInfo.telefone || "", // Salva o telefone para o botão de WhatsApp
         plano: pacienteInfo.plano,
         data,
         hora,
@@ -55,19 +56,19 @@ export default function NovaConsulta() {
       <h1 style={styles.title}>Agendar Nova Consulta</h1>
       <div style={styles.card}>
         <form onSubmit={handleAgendar} style={styles.form}>
-          
+
           <label style={styles.label}>Paciente</label>
           <select style={styles.input} value={pacienteId} onChange={e => setPacienteId(e.target.value)} required>
             <option value="">Selecione...</option>
             {pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
 
-          <div style={{display: 'flex', gap: '10px'}}>
-            <div style={{flex: 1}}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ flex: 1 }}>
               <label style={styles.label}>Data</label>
               <input type="date" style={styles.input} value={data} onChange={e => setData(e.target.value)} required />
             </div>
-            <div style={{flex: 1}}>
+            <div style={{ flex: 1 }}>
               <label style={styles.label}>Horário</label>
               <input type="time" style={styles.input} value={hora} onChange={e => setHora(e.target.value)} required />
             </div>
